@@ -177,8 +177,3 @@ private:
         return factories;
     }
 };
-
-ITerminalConnectionProvider GetTerminalConnectionProvider()
-{
-    return make<OptionalPackageTerminalConnectionProvider>();
-}

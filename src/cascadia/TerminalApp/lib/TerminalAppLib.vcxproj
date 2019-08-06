@@ -13,9 +13,7 @@
     -->
     <DisableEmbeddedXbf>false</DisableEmbeddedXbf>
   </PropertyGroup>
-
   <Import Project="$(OpenConsoleDir)src\cppwinrt.build.pre.props" />
-  
   <!-- ========================= XAML files ======================== -->
   <ItemGroup>
     <!-- HERE BE DRAGONS:
@@ -41,7 +39,6 @@
       <SubType>Designer</SubType>
     </Page>
   </ItemGroup>
-  
   <!-- ========================= Headers ======================== -->
   <ItemGroup>
     <ClInclude Include="../App.base.h" />
@@ -74,7 +71,6 @@
     </ClInclude>
     <ClInclude Include="AppConnectionProvider.h" />
   </ItemGroup>
-  
   <!-- ========================= Cpp Files ======================== -->
   <ItemGroup>
     <ClCompile Include="../init.cpp" />
@@ -102,6 +98,7 @@
     <ClCompile Include="../KeyChordSerialization.cpp" />
     <ClCompile Include="../Utils.cpp" />
     <ClCompile Include="../ScopedResourceLoader.cpp" />
+    <ClCompile Include="AppConnectionProvider.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
@@ -117,7 +114,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
-    <ClCompile Include="AppConnectionProvider.cpp" />
+    <ClCompile Include="AppExtensionConnectionProvider.cpp" />
   </ItemGroup>
   <!-- ========================= idl Files ======================== -->
   <ItemGroup>
@@ -144,13 +141,11 @@
       <SubType>Code</SubType>
     </Midl>
   </ItemGroup>
-  
   <!-- ========================= Misc Files ======================== -->
   <ItemGroup>
     <PRIResource Include="../Resources/en-US/Resources.resw" />
     <None Include="../packages.config" />
   </ItemGroup>
-  
   <!-- ========================= Project References ======================== -->
   <ItemGroup>
     <!--
@@ -159,45 +154,38 @@
       you also update all the consumers
     -->
     <ProjectReference Include="$(OpenConsoleDir)src\types\lib\types.vcxproj" />
-
     <!-- For whatever reason, we can't include the TerminalControl and
     TerminalSettings projects' winmds via project references. So we'll have to
     manually include the winmds as References below -->
   </ItemGroup>
-
   <PropertyGroup>
     <!-- A small helper for paths to the compiled cppwinrt projects -->
     <_BinRoot Condition="'$(Platform)' != 'Win32'">$(OpenConsoleDir)$(Platform)\$(Configuration)\</_BinRoot>
     <_BinRoot Condition="'$(Platform)' == 'Win32'">$(OpenConsoleDir)$(Configuration)\</_BinRoot>
   </PropertyGroup>
-
   <PropertyGroup>
     <!-- This is a hack to get the ARM64 CI build working. See
     https://github.com/Microsoft/msbuild/issues/3746 - it looks like MsBuild
     just has a bug in it.-->
     <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>Warning</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
   </PropertyGroup>
-
   <ItemGroup>
     <!-- Manually add references to each of our dependent winmds. Mark them as
     private=false and CopyLocalSatelliteAssemblies=false, so that we don't
     propogate them upwards (which can make referencing this project result in
     duplicate type definitions)-->
-
     <Reference Include="Microsoft.Terminal.Settings">
       <HintPath>$(_BinRoot)TerminalSettings\Microsoft.Terminal.Settings.winmd</HintPath>
       <IsWinMDFile>true</IsWinMDFile>
       <Private>false</Private>
       <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
     </Reference>
-
     <Reference Include="Microsoft.Terminal.TerminalConnection">
       <HintPath>$(_BinRoot)TerminalConnection\Microsoft.Terminal.TerminalConnection.winmd</HintPath>
       <IsWinMDFile>true</IsWinMDFile>
       <Private>false</Private>
       <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
     </Reference>
-
     <Reference Include="Microsoft.Terminal.TerminalControl">
       <HintPath>$(_BinRoot)TerminalControl\Microsoft.Terminal.TerminalControl.winmd</HintPath>
       <IsWinMDFile>true</IsWinMDFile>
@@ -205,7 +193,6 @@
       <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
     </Reference>
   </ItemGroup>
-  
   <!-- ====================== Compiler & Linker Flags ===================== -->
   <ItemDefinitionGroup>
     <ClCompile>
@@ -218,7 +205,6 @@
       <AdditionalDependencies>WindowsApp.lib;shell32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
-  
   <!-- ========================= Globals ======================== -->
   <PropertyGroup Label="Globals">
     <ProjectGuid>{CA5CAD1A-9A12-429C-B551-8562EC954746}</ProjectGuid>
@@ -236,10 +222,8 @@
      -->
     <NoOutputRedirection>true</NoOutputRedirection>
   </PropertyGroup>
-
   <Import Project="$(OpenConsoleDir)src\common.build.post.props" />
   <Import Project="$(OpenConsoleDir)src\cppwinrt.build.post.props" />
-  
   <!-- Manually include MUX here, instead of importing its targets file. We need
   to reference its winmd, but very specifically with the
   CopyLocalSatelliteAssemblies and Private properties set to false, as to not
@@ -262,7 +246,6 @@
     </Reference>
     <ReferenceCopyLocalPaths Include="$(_MUXRoot)runtimes\win10-$(Native-Platform)\native\Microsoft.UI.Xaml.dll" />
     <ReferenceCopyLocalPaths Include="$(_MUXRoot)runtimes\win10-$(Native-Platform)\native\Microsoft.UI.Xaml.pri" />
-    
     <!-- Microsoft.UI.XAML.Application -->
     <Reference Include="$(_MUXAppRoot)lib\uap10.0\Microsoft.Toolkit.Win32.UI.XamlHost.winmd">
       <Implementation>Microsoft.Toolkit.Win32.UI.XamlHost.dll</Implementation>
@@ -274,7 +257,6 @@
     <ReferenceCopyLocalPaths Include="$(_MUXAppRoot)runtimes\win10-$(Native-Platform)\native\Microsoft.Toolkit.Win32.UI.XamlHost.*" />
   </ItemGroup>
   <!-- End MUX import -->
-  
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
@@ -282,8 +264,6 @@
     <Error Condition="!Exists('$(OpenConsoleDir)\packages\Microsoft.UI.Xaml.2.2.190611001-prerelease\build\native\Microsoft.UI.Xaml.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(OpenConsoleDir)\packages\Microsoft.UI.Xaml.2.2.190611001-prerelease\build\native\Microsoft.UI.Xaml.targets'))" />
     <Error Condition="!Exists('$(OpenConsoleDir)\packages\Microsoft.Toolkit.Win32.UI.XamlApplication.6.0.0-preview6.2\build\native\Microsoft.Toolkit.Win32.UI.XamlApplication.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(OpenConsoleDir)\packages\Microsoft.Toolkit.Win32.UI.XamlApplication.6.0.0-preview6.2\build\native\Microsoft.Toolkit.Win32.UI.XamlApplication.targets'))" />
   </Target>
-
-
   <!--
     By default, the PRI file will contain resource paths beginning with the
     project name. Since we enabled XBF embedding, this *also* includes App.xbf.
