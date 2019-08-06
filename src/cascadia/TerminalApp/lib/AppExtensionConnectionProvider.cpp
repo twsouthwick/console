@@ -127,7 +127,7 @@ struct AppExtensionFactory : implements<AppExtensionFactory, ITerminalConnection
 
         // Get id
         GUID id;
-        if (CLSIDFromString(extension.Id().data(), &id) != S_OK)
+        if (UuidFromString((RPC_WSTR)extension.Id().data(), &id) != RPC_S_OK)
         {
             return nullptr;
         }
@@ -143,6 +143,16 @@ private:
         if (subset != nullptr)
         {
             auto text = subset.TryLookup(L"#text");
+
+            if (text != nullptr)
+            {
+                auto value = text.try_as<IPropertyValue>();
+
+                if (value != nullptr)
+                {
+                    return value.GetString();
+                }
+            }
         }
 
         return L"";
