@@ -23,10 +23,48 @@ struct AppExtensionTerminalConnection : implements<AppExtensionTerminalConnectio
     AppExtensionTerminalConnection(AppExtension extension, hstring serviceName, TerminalConnectionStartupInfo startupInfo) :
         _connection(),
         _extension(extension),
-        _startupInfo(startupInfo)
+        _startupInfo(startupInfo),
+        _status(AppServiceConnectionStatus::Unknown)
     {
         _connection.AppServiceName(serviceName);
         _connection.PackageFamilyName(extension.Package().Id().FamilyName());
+
+        auto name = _connection.PackageFamilyName();
+
+        _connection.RequestReceived([this](auto&& connection, AppServiceRequestReceivedEventArgs args) {
+            auto request = args.Request();
+            auto message = request.Message();
+
+            if (!message.HasKey(L"command"))
+            {
+                UnknownError(L"No command value available");
+                return;
+            }
+
+            auto command = message.Lookup(L"command").as<IPropertyValue>().GetString();
+
+            if (message.HasKey(L"output"))
+            {
+                auto value = message.Lookup(L"value").try_as<IPropertyValue>();
+
+                if (value != nullptr)
+                {
+                    _outputHandlers(value.GetString());
+                }
+                else
+                {
+                    UnknownError(L"No value key for output command");
+                }
+            }
+            else if (message.HasKey(L"disconnect"))
+            {
+                _disconnectHandlers();
+            }
+            else
+            {
+                UnknownError(L"");
+            }
+        });
     }
 
     event_token TerminalOutput(TerminalOutputEventArgs const& handler)
@@ -51,21 +89,53 @@ struct AppExtensionTerminalConnection : implements<AppExtensionTerminalConnectio
 
     void Start()
     {
-        _connection.OpenAsync().Completed([this](auto&& async, AsyncStatus status) {
-            _disconnectHandlers();
+        _connection.OpenAsync().Completed([this](auto&& result, AsyncStatus status) {
+            _status = result.get();
+
+            if (_status != AppServiceConnectionStatus::Success)
+            {
+                UnknownError(L"Could not connect to service");
+            }
         });
     }
 
     void WriteInput(hstring const& data)
     {
+        if (_status == AppServiceConnectionStatus::Success)
+        {
+            ValueSet set;
+            set.Insert(L"command", box_value(L"input"));
+            set.Insert(L"value", box_value(data));
+            _connection.SendMessageAsync(set).Completed([](auto&& sender, AsyncStatus status) {
+                OutputDebugString(L"Input sent\n");
+            });
+        }
     }
 
     void Resize(uint32_t rows, uint32_t columns)
     {
+        if (_status == AppServiceConnectionStatus::Success)
+        {
+            ValueSet set;
+            set.Insert(L"command", box_value(L"resize"));
+            set.Insert(L"rows", box_value(rows));
+            set.Insert(L"columns", box_value(columns));
+            _connection.SendMessageAsync(set).Completed([](auto&& sender, AsyncStatus status) {
+                OutputDebugString(L"Resize sent\n");
+            });
+        }
     }
 
     void Close()
     {
+        if (_status == AppServiceConnectionStatus::Success)
+        {
+            ValueSet set;
+            set.Insert(L"command", box_value(L"resize"));
+            _connection.SendMessageAsync(set).Completed([](auto&& sender, AsyncStatus status) {
+                OutputDebugString(L"Close sent\n");
+            });
+        }
     }
 
 private:
@@ -75,6 +145,14 @@ private:
 
     event<TerminalOutputEventArgs> _outputHandlers;
     event<TerminalDisconnectedEventArgs> _disconnectHandlers;
+
+    AppServiceConnectionStatus _status;
+
+    void UnknownError(hstring msg)
+    {
+        _status = AppServiceConnectionStatus::AppServiceUnavailable;
+        _disconnectHandlers();
+    }
 };
 
 struct AppExtensionFactory : implements<AppExtensionFactory, ITerminalConnectionFactory>
